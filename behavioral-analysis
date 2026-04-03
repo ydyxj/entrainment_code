@@ -1,0 +1,126 @@
+clear all; clc;
+
+%% ====== Single-subject analysis ======
+dataPath = '/home/experiment/Documents/toolbox/Bauer/results';
+
+% add subjID
+subjID = input('Enter subject ID: ');
+
+% stimulation frequency
+freqList = {'3', '10'};  % 3 Hz or 10 Hz 
+
+%  merge block for each frequency
+for f = 1:length(freqList)
+    freqStr = freqList{f};
+
+    % chech the number of blocks
+    files = dir(fullfile(dataPath, sprintf('s%d_%sHz _block_*.mat', subjID, freqStr)));
+    nBlocks = numel(files);
+
+    if nBlocks == 0
+        warning('subj %d without dataset in %s Hz .', subjID, freqStr);
+        continue;
+    end
+
+    % merge block
+    merge_blocks(dataPath, subjID, freqStr, nBlocks);
+end
+
+fprintf('✅ all blocks for subj %d has been merged。\n', subjID);
+
+
+% file name
+subjFile = fullfile(dataPath, sprintf('s%d_10Hz_allBlocks.mat', subjID));
+if ~exist(subjFile, 'file')
+    error('File not found: %s', subjFile);
+end
+
+%% ====== Behavioral analysis ======
+%  get smoothed d' & phase bin centers
+[dprime_smooth, binCenters, binCentersDeg] = analyze_behavior(subjFile);
+% [dprime_smooth, binCenters, binCentersDeg] = analyze_behavior('s11_3Hz _block_1.mat');
+
+% Plot single-subject d' 
+figure('Color', 'w', 'Position', [300, 200, 800, 500]) ;
+plot(binCenters, dprime_smooth, 'ko-', 'LineWidth', 1.5, 'DisplayName', "Observed d'");
+hold on;
+
+% Generate reference sine wave 
+xfit = linspace(0, 2*pi, 200);      
+yfit = sin(xfit);                    
+yfit = (yfit - min(yfit)) / (max(yfit)-min(yfit));  
+yfit = yfit * (max(dprime_smooth)-min(dprime_smooth)) + min(dprime_smooth);  
+
+plot(xfit, yfit, 'r--', 'LineWidth', 1.2, 'DisplayName', 'Sound wave');
+
+% === Axis and labels ===
+set(gca, ...
+    'XTick', 0:pi/2:2*pi, ...
+    'XTickLabel', {'0','\pi/2','\pi','3\pi/2','2\pi'}, ...
+    'FontSize', 16, ...
+    'LineWidth', 1.5, ...
+    'Box', 'off', ...          
+    'Color', 'w', ...          
+    'XColor', 'k', 'YColor', 'k');  
+
+grid off;
+legend('show', 'Location', 'best');
+hold off;
+title(sprintf('Subject %d: 10Hz visual target sensitivity', subjID), ...
+      'FontSize', 20, 'FontWeight', 'bold');
+
+
+% === RT Phase Analysis ===
+[rt_mean, rt_smooth, binCenters, binCentersDeg] = analyze_RT(subjFile);
+
+figure('Color','w','Position',[300,200,800,500]);
+plot(binCenters, rt_mean, 'ko-', 'LineWidth', 1.8, ...
+    'MarkerFaceColor','w', 'DisplayName', 'Observed RT');
+hold on;
+
+% === Reference sine wave (for visual comparison only) ===
+xfit = linspace(0, 2*pi, 200);
+yfit = sin(xfit);
+yfit = (yfit - min(yfit)) / (max(yfit)-min(yfit));  % Rescale [0,1]
+yfit = yfit * (max(rt_mean)-min(rt_mean)) + min(rt_mean);  
+plot(xfit, yfit, 'r--', 'LineWidth', 1.2, 'DisplayName', 'Reference sine');
+
+% % === Smoothing result ===
+% plot(binCenters, rt_smooth, 'b-o', 'LineWidth', 1.5, ...
+%     'DisplayName', 'Smoothed RT');
+
+% === Axis & Labels ===
+set(gca, ...
+    'XTick', 0:pi/2:2*pi, ...
+    'XTickLabel', {'0','\pi/2','\pi','3\pi/2','2\pi'}, ...
+    'FontSize', 16, ...
+    'LineWidth', 1.5, ...
+    'Box', 'off', ...
+    'Color', 'w', ...
+    'XColor', 'k', 'YColor', 'k');
+
+xlabel('Combined Phase (rad)', 'FontSize',18);
+ylabel('Reaction Time (s)', 'FontSize',18);
+title(sprintf('Subject %d: 10 Hz RT modulation by Phase', subjID), ...
+    'FontSize',20,'FontWeight','bold');
+
+legend('show','Location','best');
+grid off;
+hold off;
+%% ====== Circular-linear correlation ======
+[R, p] = circ_corrcl(binCenters(:), dprime_smooth(:));
+fprintf('Subject %d circular-linear correlation: R=%.3f, p=%.4f\n', subjID, R, p);
+
+% permutation test
+[R_obs, zscore, p_emp, Rperm] = circ_lin_perm_test(binCenters(:), dprime_smooth(:), 1000, 2);
+
+fprintf('Subject %d | Observed R = %.3f\n', subjID, R_obs);
+fprintf('Permutation test: z = %.3f, p_emp = %.4f\n', zscore, p_emp);
+
+figure('Color','w');
+histogram(Rperm, 30, 'FaceColor',[0.6 0.6 0.6], 'EdgeColor','none');
+hold on;
+xline(R_obs, 'r-', 'LineWidth', 2);
+xlabel('Permutation R'); ylabel('Count');
+title(sprintf('Subject %d | R=%.3f | z=%.2f | p=%.4f', subjID, R_obs, zscore, p_emp));
+box off;
