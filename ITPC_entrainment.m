@@ -20,7 +20,6 @@ if ~exist(save_dir, 'dir')
 end
 
 savename = '-10Hz';  % change stimulation frequency
-% fmHz      = 3;  % sound frequency
 
 % ========== main loop ==========
 for j = 1:length(filelist)
