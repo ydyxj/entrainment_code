@@ -1,7 +1,7 @@
 clear all; clc;
 
 %% ====== Single-subject analysis ======
-dataPath = '/home/experiment/Documents/toolbox/results';
+dataPath = '/home/experiment/Documents/gabordetection/results';
 
 % add subjID
 subjID = input('Enter subject ID: ');
