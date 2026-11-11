@@ -1,7 +1,7 @@
 clear all; clc;
 
 %% ====== Single-subject analysis ======
-dataPath = '/home/experiment/Documents/toolbox/Bauer/results';
+dataPath = '/home/experiment/Documents/toolbox/results';
 
 % add subjID
 subjID = input('Enter subject ID: ');
@@ -37,8 +37,7 @@ end
 
 %% ====== Behavioral analysis ======
 %  get smoothed d' & phase bin centers
-[dprime_smooth, binCenters, binCentersDeg] = analyze_behavior(subjFile);
-% [dprime_smooth, binCenters, binCentersDeg] = analyze_behavior('s11_3Hz _block_1.mat');
+[dprime_smooth, binCenters, binCentersDeg, dprime_raw] = analyze_behavior(subjFile);
 
 % Plot single-subject d' 
 figure('Color', 'w', 'Position', [300, 200, 800, 500]) ;
@@ -112,7 +111,7 @@ hold off;
 fprintf('Subject %d circular-linear correlation: R=%.3f, p=%.4f\n', subjID, R, p);
 
 % permutation test
-[R_obs, zscore, p_emp, Rperm] = circ_lin_perm_test(binCenters(:), dprime_smooth(:), 1000, 2);
+[R_obs, zscore, p_emp, Rperm] = circ_lin_perm_test(binCenters(:), dprime_raw(:), 1000, 3);
 
 fprintf('Subject %d | Observed R = %.3f\n', subjID, R_obs);
 fprintf('Permutation test: z = %.3f, p_emp = %.4f\n', zscore, p_emp);
